@@ -1,0 +1,44 @@
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_10_nonsplit_montgomery
+Effective Density Gain Ratio γ : 1.12x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  43.96%   |    alpha =  50.00%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  56.04%    |  1-alpha =  50.00%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: ✅ EXCELLENT ACCELERATION! True solution density is highly concentrated.
+Reading dataset and evaluating filter function [filter_11_x1_16_prescribed_torsion]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_11_x1_16_prescribed_torsion
+Effective Density Gain Ratio γ : 8.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =   0.00%   |    alpha =  87.50%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  = 100.00%    |  1-alpha =  12.50%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: ✅ EXCELLENT ACCELERATION! True solution density is highly concentrated.
+Reading dataset and evaluating filter function [filter_12_2sylow_halving_precheck]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_12_2sylow_halving_precheck
+Effective Density Gain Ratio γ : 4.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =   0.00%   |    alpha =  75.00%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  = 100.00%    |  1-alpha =  25.00%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: ✅ EXCELLENT ACCELERATION! True solution density is highly concentrated.
+=================================================================

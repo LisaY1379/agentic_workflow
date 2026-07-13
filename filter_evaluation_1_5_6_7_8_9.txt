@@ -1,0 +1,89 @@
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_01_quadratic_residue_bias
+Effective Density Gain Ratio γ : 1.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  49.98%   |    alpha =  50.00%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  50.02%    |  1-alpha =  50.00%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: 🟡 NEUTRAL. The filter discards valid solutions proportionally with noise.
+Reading dataset and evaluating filter function [filter_05_prime_modular_bias]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_05_prime_modular_bias
+Effective Density Gain Ratio γ : 1.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  46.55%   |    alpha =  46.67%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  53.45%    |  1-alpha =  53.33%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: 🟡 NEUTRAL. The filter discards valid solutions proportionally with noise.
+Reading dataset and evaluating filter function [filter_06_modular_bias]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_06_modular_bias
+Effective Density Gain Ratio γ : 1.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  28.52%   |    alpha =  28.57%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  71.48%    |  1-alpha =  71.43%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: 🟡 NEUTRAL. The filter discards valid solutions proportionally with noise.
+Reading dataset and evaluating filter function [filter_07_A_modulo_heuristic]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_07_A_modulo_heuristic
+Effective Density Gain Ratio γ : 1.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  27.25%   |    alpha =  27.27%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  72.75%    |  1-alpha =  72.73%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: 🟡 NEUTRAL. The filter discards valid solutions proportionally with noise.
+Reading dataset and evaluating filter function [filter_08_quadratic_residue_distribution]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_08_quadratic_residue_distribution
+Effective Density Gain Ratio γ : 0.95x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  33.58%   |    alpha =  29.84%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  66.42%    |  1-alpha =  70.16%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: ❌ INEFFECTIVE! The filter hurts solution density more than random guessing.
+Reading dataset and evaluating filter function [filter_09_mod_13_residue]...
+
+=================================================================
+📊 FILTER EVALUATION REPORT: filter_09_mod_13_residue
+Effective Density Gain Ratio γ : 1.00x
+-----------------------------------------------------------------
+ [2x2 Decision Matrix - Proportions] 
+                             |  Is True A Solution  |  Is NOT A Solution  |
+ ----------------------------+----------------------+---------------------|
+  Rejected (Filtered Out)    |    beta  =  53.84%   |    alpha =  53.85%  |
+ ----------------------------+----------------------+---------------------|
+  Not Rejected (Passed)      | 1-beta  =  46.16%    |  1-alpha =  46.15%  |
+ ----------------------------+----------------------+---------------------|
+
+👉 Conclusion: 🟡 NEUTRAL. The filter discards valid solutions proportionally with noise.
+=================================================================
