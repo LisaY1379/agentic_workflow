@@ -27,5 +27,5 @@ def pp_verify(p, A, x0):
     # we chose 2^k > q + 1 + 2*sqrt(q), so this is possible only when p is prime
     return gcd(Zprev, p) == 1 and Z % p == 0
 
-a = pp_verify(127,103,51)
+a = pp_verify(10000000000000000000139,7817497726188867769594, 6360135963771546554167)
 print(a)
