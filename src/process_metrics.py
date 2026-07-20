@@ -3,9 +3,10 @@ import pandas as pd
 
 files = [
     'output_method0_metrics.csv',
-    'output_method1_metrics_7d.csv',
+    'output_method1_metrics.csv',
     'output_method2_metrics.csv',
-    'output_method3_metrics.csv'
+    'output_method3_metrics.csv',
+    'output_method4_metrics.csv'
 ]
 
 results = {}

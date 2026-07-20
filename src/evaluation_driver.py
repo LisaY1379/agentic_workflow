@@ -5,7 +5,7 @@ import subprocess
 # ================================================================
 # Configuration
 # ================================================================
-INPUT_CSV_FILE = "../data/primes_dataset_7d.csv"  # Name of your input dataset
+INPUT_CSV_FILE = "../data/primes_dataset.csv"  # Name of your input dataset
 TARGET_TRIPLES_PER_PRIME = "20"
 
 # Mapping the enumeration parameter to your 4 C programs
@@ -13,7 +13,8 @@ C_PROGRAM_MAP = {
     0: "pomerance_baseline.c",
     1: "pomerance_w_method1.c",
     2: "pomerance_w_method2.c",
-    3: "pomerance_w_method3.c"
+    3: "pomerance_w_method3.c",
+    4: "pomerance_w_method4.c"
 }
 
 
@@ -115,4 +116,4 @@ def main(method_enum):
 # ENTRY POINT
 # ================================================================
 if __name__ == "__main__":
-    main(2)
+    main(4)

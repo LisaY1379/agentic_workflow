@@ -2,7 +2,8 @@
 Method / File                    | Hit Rate (M1)  | Cost/Trial (M2) | E(T) ms/Hit 
 --------------------------------------------------------------------------------
 output_method0_metrics.csv       | 8.28e-05       | 0.0300          | 362.81      
-output_method1_metrics_7d.csv    | 3.12e-03       | 0.0793          | 25.43       
+output_method1_metrics.csv       | 3.12e-03       | 0.0793          | 25.43       
 output_method2_metrics.csv       | 1.04e-05       | 0.0031          | 298.69      
 output_method3_metrics.csv       | 1.08e-04       | 0.0316          | 293.39      
+output_method4_metrics.csv       | 3.80e-05       | 0.0095          | 250.31      
 ================================================================================
