@@ -2,7 +2,7 @@
 
 ## Goal
 
-Our goal is to find searching algorithms that are faster than random search for finding Pomerance Proofs.
+Our goal is to find searching algorithms that are *faster* (definition of "faster": see section *Benchmark for Algorithms*) than random search for finding Pomerance Proofs.
 
 ## Background: Pomerance Primality Proof
 
@@ -20,7 +20,7 @@ extend (p, A) to (p, A, x0) (this will fail or succeed in quasi-quadratic expect
 
 ## Benchmark for Algorithms
 
-See benchmark_protocol.md. Only algorithms whose E(T) score is smaller than 362.81 are considered effective.
+See benchmark_protocol.md. Only algorithms whose E(T) score is smaller than 362.81 are considered faster.
 
 ## Instruction to PM
 
