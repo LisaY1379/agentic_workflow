@@ -11,7 +11,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
 # ==========================================
-# 1. Base Tools (Worker-Level Capabilities)
+# 1. Base Tools (Including Terminal Command)
 # ==========================================
 def list_files(directory: str = "."):
     """Lists all files in the given directory (default is current directory)."""
@@ -26,7 +26,7 @@ def list_files(directory: str = "."):
 def read_local_file(file_name: str):
     """Reads the content of ANY local file EXCEPT CSV files."""
     if file_name.lower().endswith('.csv'):
-        return "Access Denied: Direct reading of .csv files is strictly PROHIBITED. Please write and execute a Python script to inspect or process CSV data."
+        return "Access Denied: Direct reading of .csv files is strictly PROHIBITED. Please write and execute a Python script or shell command to inspect CSV data."
 
     if os.path.exists(file_name):
         try:
@@ -49,80 +49,88 @@ def create_or_write_file(file_name: str, content: str):
     except Exception as e:
         return f"Error writing file: {str(e)}"
 
-
-def run_python_script(file_name: str):
-    """Executes a Python script and returns its stdout and stderr."""
-    if not os.path.exists(file_name):
-        return f"Error: File '{file_name}' does not exist."
-
-    if not file_name.lower().endswith('.py'):
-        return "Error: You can only execute '.py' files with this tool."
+def execute_terminal_command(command: str):
+    """Executes a terminal/shell command (e.g., bash/cmd) and returns its stdout and stderr."""
+    # 1. Security Check: Block extremely destructive commands
+    forbidden_keywords = ["rm -rf /", "rm -rf ~", "mkfs", "dd if=", "shutdown", "reboot", "> /dev/null"]
+    for forbidden in forbidden_keywords:
+        if forbidden in command.lower():
+            return f"Access Denied: The command containing '{forbidden}' is strictly blocked for security reasons."
 
     try:
+        # Execute command using system shell
+        # Set timeout to prevent infinite blocking (e.g., interactive prompts or long loops)
         result = subprocess.run(
-            [sys.executable, file_name],
+            command,
+            shell=True,
             capture_output=True,
             text=True,
             encoding='utf-8',
-            timeout=30
+            errors='replace',
+            timeout=60
         )
 
         output = ""
         if result.stdout:
             output += f"[Standard Output]:\n{result.stdout}\n"
         if result.stderr:
-            output += f"[Error Output]:\n{result.stderr}\n"
+            output += f"[Standard Error]:\n{result.stderr}\n"
 
         if not output.strip():
-            return "Success: Script executed successfully with no printed output."
+            return "Success: Command executed successfully with no output returned."
+
+        # Truncate extremely long outputs (prevents blowing up token limit)
+        if len(output) > 3000:
+            output = output[:3000] + "\n...[Output truncated due to character limit. Modify command to narrow output.]"
 
         return output
     except subprocess.TimeoutExpired:
-        return "Error: Execution timed out (exceeded 30 seconds). Check if the code has an infinite loop."
+        return "Error: Command execution timed out (exceeded 60 seconds). Avoid interactive commands or long-running daemons."
     except Exception as e:
-        return f"Error executing script: {str(e)}"
+        return f"Error executing terminal command: {str(e)}"
 
 
-# Tools accessible ONLY by the Specialist Sub-Agents (Workers)
+# Tools metadata provided to Worker Sub-Agents
 worker_tools_metadata = [
     {
         "type": "function",
         "function": {
             "name": "list_files",
             "description": "List all files in the current working directory to see what is available.",
-            "parameters": {"type": "object", "properties": {"directory": {"type": "string",
-                                                                          "description": "The directory path to list files from. Default is '.' (current directory)."}}}
+            "parameters": {"type": "object", "properties": {"directory": {"type": "string", "description": "The directory path. Default is '.'."}}}
         }
     },
     {
         "type": "function",
         "function": {
             "name": "read_local_file",
-            "description": "Read the text content of local files (e.g., .py, .txt, .json, .md). STRICTLY PROHIBITED FOR .csv FILES. Do NOT pass .csv files to this tool.",
-            "parameters": {"type": "object", "properties": {
-                "file_name": {"type": "string", "description": "The name of the file to read (EXCLUDING .csv files)."}},
-                           "required": ["file_name"]}
+            "description": "Read text files (e.g., .py, .txt, .json). STRICTLY PROHIBITED FOR .csv FILES.",
+            "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "Name of the file to read."}}, "required": ["file_name"]}
         }
     },
     {
         "type": "function",
         "function": {
             "name": "create_or_write_file",
-            "description": "Create a new Python file (.py) or any text file, or overwrite an existing file with new content.",
-            "parameters": {"type": "object", "properties": {
-                "file_name": {"type": "string", "description": "The name of the file to create/save."},
-                "content": {"type": "string", "description": "The full code or text content to write into the file."}},
-                           "required": ["file_name", "content"]}
+            "description": "Create a new file or overwrite an existing text/code file.",
+            "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "Name of the file."}, "content": {"type": "string", "description": "Full text content."}}, "required": ["file_name", "content"]}
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "run_python_script",
-            "description": "Execute a local Python script (.py) and get its output or error messages. Essential for running data analysis on CSV files or testing code.",
-            "parameters": {"type": "object", "properties": {
-                "file_name": {"type": "string", "description": "The name of the Python file to execute."}},
-                           "required": ["file_name"]}
+            "name": "execute_terminal_command",
+            "description": "Execute any bash/terminal command (e.g., 'pip install pandas', 'python script.py', 'git status', 'ls -la', 'head -n 20 data.csv'). Use this for system actions or package installation.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "The shell command to execute in the local terminal."
+                    }
+                },
+                "required": ["command"]
+            }
         }
     }
 ]
@@ -131,31 +139,26 @@ WORKER_TOOLS_MAP = {
     "list_files": list_files,
     "read_local_file": read_local_file,
     "create_or_write_file": create_or_write_file,
-    "run_python_script": run_python_script
+    "execute_terminal_command": execute_terminal_command
 }
 
 
 # ==========================================
-# 2. Sub-Agent Engine (The Worker Sandbox)
+# 2. Sub-Agent Engine (Worker Sandbox)
 # ==========================================
 def run_sub_agent(role_name: str, system_prompt: str, task_description: str):
-    """
-    Spins up an autonomous specialist sub-agent to execute a specific task.
-    It operates in its own isolated context and returns only the final summary report.
-    """
+    """Spins up an autonomous specialist sub-agent to execute a task using worker tools."""
     print(f"\n🏢 [Director Delegation] Dispatching task to specialist: 【{role_name}】...")
     print(f"📋 [Task Directive]: {task_description}")
 
-    # 1. Isolated Context: This prevents worker tracebacks/long outputs from polluting the PM's chat history!
     sub_history = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": task_description}
     ]
 
-    # 2. Worker Loop: Allow up to 5 iterations for the sub-agent to write code, test, and self-correct errors.
     for _ in range(5):
         response = client.chat.completions.create(
-            model="gpt-4o",  # Can be swapped to gpt-4o-mini to save tokens for routine worker tasks
+            model="gpt-4o-mini",
             messages=sub_history,
             tools=worker_tools_metadata
         )
@@ -166,7 +169,7 @@ def run_sub_agent(role_name: str, system_prompt: str, task_description: str):
             for tc in msg.tool_calls:
                 func_name = tc.function.name
                 args = json.loads(tc.function.arguments)
-                print(f"   🛠️ 【{role_name}】 is calling [{func_name}]...")
+                print(f"   🛠️ 【{role_name}】 is executing [{func_name}] with args: {args}...")
 
                 func_to_call = WORKER_TOOLS_MAP.get(func_name)
                 res = func_to_call(**args) if func_to_call else f"Error: Tool {func_name} not found."
@@ -178,46 +181,42 @@ def run_sub_agent(role_name: str, system_prompt: str, task_description: str):
                     "content": str(res)
                 })
         else:
-            # When the sub-agent stops calling tools, it means it reached a conclusion!
             print(f"✅ 【{role_name}】 has completed the assignment!")
             return f"[{role_name}'s Report]: {msg.content}"
 
-    return f"[{role_name} Execution Timeout]: Failed to complete the task within 5 autonomous iterations. Please re-evaluate the requirements."
+    return f"[{role_name} Execution Timeout]: Failed to complete the task within 5 iterations."
 
 
 # ==========================================
-# 3. PM Management Tool (Delegation)
+# 3. PM Management Tool
 # ==========================================
 def delegate_to_specialist(role_name: str, task_description: str):
-    """The tool used by the PM Agent to summon and command specialized sub-agents."""
+    """The tool used by the PM Agent to command specialized sub-agents."""
     prompts = {
         "Software Engineer": (
-            "You are a Senior Software Engineer. Your sole objective is to write clean, robust, and well-tested code, "
-            "save it to the filesystem, and execute it to verify it works. Always fix bugs independently if scripts fail."
+            "You are a Senior DevOps and Software Engineer with full terminal access via `execute_terminal_command`. "
+            "You can install pip packages, run scripts, manage git, and inspect environment setups. "
+            "Always fix errors independently and verify shell command outputs."
         ),
         "Data Analyst": (
-            "You are an expert Data Analyst specializing in Python. You excel at extracting actionable business insights from data. "
-            "CRITICAL RULE: You are strictly forbidden from reading '.csv' files directly with `read_local_file`. "
-            "You must write and execute Python scripts (using pandas/csv) to analyze CSV data and report the results."
+            "You are an expert Data Analyst with terminal access. "
+            "CRITICAL RULE: Never use `read_local_file` for CSVs. Instead, write Python scripts or use shell commands like `head` or `awk` via `execute_terminal_command` to inspect data."
         ),
         "QA Tester": (
-            "You are a meticulous QA Testing Engineer. Your role is to inspect existing code, write comprehensive test cases, "
-            "execute them, and expose edge cases or potential bugs."
+            "You are a QA Engineer. You can run test suites (e.g., `pytest`), execute scripts, and verify software output using terminal commands."
         )
     }
 
-    sys_prompt = prompts.get(role_name,
-                             "You are a specialized AI assistant. Use your tools to accomplish the assigned task.")
+    sys_prompt = prompts.get(role_name, "You are a specialized AI assistant with terminal access.")
     return run_sub_agent(role_name, sys_prompt, task_description)
 
 
-# The PM only has management tools, no direct coding/file access!
 pm_tools_metadata = [
     {
         "type": "function",
         "function": {
             "name": "delegate_to_specialist",
-            "description": "Delegate a technical task (coding, data analysis, testing, file operations) to a specialized worker sub-agent. Do NOT attempt to write code or read files yourself; always delegate to the appropriate specialist.",
+            "description": "Delegate a technical or environment task to a specialist sub-agent.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -228,7 +227,7 @@ pm_tools_metadata = [
                     },
                     "task_description": {
                         "type": "string",
-                        "description": "Clear, detailed instructions and requirements for what the specialist needs to accomplish."
+                        "description": "Detailed instructions and requirements for the task."
                     }
                 },
                 "required": ["role_name", "task_description"]
@@ -239,23 +238,17 @@ pm_tools_metadata = [
 
 
 # ==========================================
-# 4. Executive PM Agent (The Mastermind)
+# 4. Executive PM Agent
 # ==========================================
 def discuss_with_pm():
-    print(
-        "🤖 PM Agent: Ready. I am your executive Product Manager. I design experiments and manage specialists to get the work done.")
+    print("🤖 PM Agent: Ready. I manage specialists who now have FULL TERMINAL ACCESS to build, test, and run code.")
 
     chat_history = [{
         "role": "system",
         "content": (
-            "You are an elite AI Product Manager and System Architect. You act as the bridge between the human user and technical execution.\n"
-            "You DO NOT write code, read files, or execute scripts directly. Instead, you analyze the user's high-level goals, "
-            "break them down into logical technical steps, and delegate them to your specialist team using `delegate_to_specialist`.\n"
-            "Available Specialists:\n"
-            "- 'Data Analyst': For data inspection, metrics calculation, and CSV file processing via scripts.\n"
-            "- 'Software Engineer': For creating applications, writing Python scripts, generating HTML/JS, or building tools.\n"
-            "- 'QA Tester': For testing scripts, verifying data accuracy, and finding bugs.\n"
-            "Synthesize the reports from your specialists and present a clear, executive-level summary to the user."
+            "You are an AI Product Manager and Architect. You DO NOT execute terminal commands yourself. "
+            "Delegate tasks to your specialist team via `delegate_to_specialist`. Your specialists have access to a terminal shell "
+            "to install packages (`pip`), run Python, execute bash tools, and inspect files."
         )
     }]
 
@@ -304,7 +297,6 @@ def discuss_with_pm():
                     "content": str(content)
                 })
 
-            # Get the final synthesis from the PM after receiving worker reports
             final_res = client.chat.completions.create(model="gpt-4o", messages=chat_history)
             print(f"\n🤖 PM Agent: {final_res.choices[0].message.content}")
             chat_history.append(final_res.choices[0].message)

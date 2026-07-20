@@ -5,7 +5,7 @@ import subprocess
 # ================================================================
 # Configuration
 # ================================================================
-INPUT_CSV_FILE = "primes_dataset_7d.csv"  # Name of your input dataset
+INPUT_CSV_FILE = "../data/primes_dataset_7d.csv"  # Name of your input dataset
 TARGET_TRIPLES_PER_PRIME = "20"
 
 # Mapping the enumeration parameter to your 4 C programs
