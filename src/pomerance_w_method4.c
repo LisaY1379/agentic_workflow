@@ -1,17 +1,32 @@
 /*
- * pomerance_optimized.c — High-Performance Pomerance Triples Hunting Engine
+ * pomerance_strategy1_barrett.c — Strategy 1 Only: Low-Level Arithmetic Acceleration
  *
- * This version merges three core strategies into your benchmarking framework:
- *   Strategy 1: Barrett Reduction & Fast Projective Montgomery Doubling (Minimizing M2)
- *   Strategy 2: Ready for X1(16) modular curve parameterizations (Custom generator hooks)
- *   Strategy 3: Early Abortion via Quadratic Residue (Legendre Symbol) Pruning (Minimizing E(T))
+ * STRATEGY 1: BARRETT REDUCTION & LOW-LEVEL ARITHMETIC ACCELERATION
+ *   - Target Metric: Extreme reduction of M2 (Cost per Trial / Clock Cycles) with zero impact on M1.
+ *   - Core Principle: In computational number theory over prime fields Fp, modular division (% p)
+ *     is the dominant hardware bottleneck during elliptic curve point doubling. Standard CPU division
+ *     instructions take 30~50 cycles, which is computationally prohibitive for high-throughput
+ *     Monte Carlo hunting simulations.
+ *   - Technical Implementation:
+ *       1. Barrett Reduction: Precomputes a fixed-point approximation of 1/p as mu = floor(2^(2k) / p).
+ *          Replaces multi-precision hardware divisions with fast bit-shifts and multiplications.
+ *       2. Pure Monte Carlo Sampling: Uniformly samples candidate curves A in Fp without any
+ *          Legendre symbol pruning (Strategy 3 removed) or modular curve parameterizations (Strategy 2 removed).
+ *   - Expected Outcome: The trial count (M1) remains strictly at the baseline theoretical expectation
+ *     (~11,800 trials), while the wall-clock execution time per trial (M2) drops dramatically.
+ *
+ * TRIAL COUNTING PRINCIPLE (Strict A-Granularity):
+ *   - The metric "trials" answers: "How many distinct random curves (A) were sampled across all CPU
+ *     cores before finding this valid triple?"
+ *   - Counter increments EXACTLY ONCE per valid random curve A sampled.
+ *   - Inner verification loops testing up to 50 random x0 candidates DO NOT increment the counter.
  *
  * Compile:
- * gcc -O3 -fopenmp -o pomerance_opt pomerance_optimized.c -lm -lpthread
- * gcc -O3 -o pomerance_opt pomerance_optimized.c -lm -lpthread   (single-threaded)
+ *   gcc -O3 -fopenmp -o pomerance_s1 pomerance_strategy1_barrett.c -lm -lpthread
+ *   gcc -O3 -o pomerance_s1 pomerance_strategy1_barrett.c -lm -lpthread   (single-threaded)
  *
  * Usage:
- * ./pomerance_opt <stateful_input.txt> <output_pure.csv> <output_metrics.csv> <target_total>
+ *   ./pomerance_s1 <stateful_input.txt> <output_pure.csv> <output_metrics.csv> <target_total>
  */
 
 #define _GNU_SOURCE
@@ -34,7 +49,7 @@ typedef uint64_t u64;
 typedef __uint128_t u128;
 
 /* ================================================================
- * Benchmark #1 & Core Utilities: CPU cycle counting & Core Pinning
+ * Hardware Telemetry & Core Pinning (Benchmark #1)
  * ================================================================ */
 
 static inline uint64_t rdtsc(void) {
@@ -66,7 +81,7 @@ static void pin_thread_to_core(int core_id) {
 }
 
 /* ================================================================
- * Benchmark #2: OpCount (manual instrumentation of algorithmic work)
+ * Algorithmic Work Instrumentation (Benchmark #2: OpCount M3)
  * ================================================================ */
 
 typedef struct {
@@ -88,7 +103,7 @@ static inline double opcount_m3(const OpCounter *c) {
 }
 
 /* ================================================================
- * Advanced I/O Helpers
+ * Advanced I/O & String Helpers
  * ================================================================ */
 
 static u128 parse128_adv(char **s) {
@@ -107,7 +122,7 @@ static void sprint128(char *buf, u128 v) {
 }
 
 /* ================================================================
- * PRNG (xorshift128+)
+ * High-Speed PRNG (xorshift128+)
  * ================================================================ */
 
 typedef struct { u64 s0, s1; } Rng;
@@ -119,7 +134,7 @@ static inline u64 rng64(Rng *r) {
 }
 
 /* ================================================================
- * Benchmark #3: High-Resolution Monotonic Timer
+ * High-Resolution Monotonic Timer (Benchmark #3)
  * ================================================================ */
 
 static double now_sec(void) {
@@ -132,7 +147,7 @@ static double now_sec(void) {
 }
 
 /* ================================================================
- * Strategy 1: Barrett Reduction Context & Arithmetic Helpers
+ * STRATEGY 1 CORE: Barrett Reduction Context & Fast Arithmetic (u64)
  * ================================================================ */
 
 typedef struct {
@@ -147,10 +162,12 @@ static inline BarrettCtx64 barrett_setup64(u64 p) {
     ctx.k = 0;
     u64 tmp = p;
     while (tmp > 0) { ctx.k++; tmp >>= 1; }
+    /* Precompute fixed-point reciprocal mu = floor(2^(2k) / p) */
     ctx.mu = ((u128)1 << (2 * ctx.k)) / p;
     return ctx;
 }
 
+/* Replaces costly CPU hardware division (% p) with fast bit-shifts and multiplication */
 static inline u64 mulmod64_barrett(u64 a, u64 b, const BarrettCtx64 *ctx) {
     t_ops.mul_count++;
     u128 z = (u128)a * b;
@@ -163,25 +180,8 @@ static inline u64 mulmod64_barrett(u64 a, u64 b, const BarrettCtx64 *ctx) {
 static inline u64 addmod64(u64 a, u64 b, u64 p) { return a >= p-b ? a-(p-b) : a+b; }
 static inline u64 submod64(u64 a, u64 b, u64 p) { return a >= b ? a-b : p-b+a; }
 
-/* Strategy 3: Fast Euler's Criterion for Legendre Symbol over u64 */
-static inline u64 powmod64_barrett(u64 base, u64 exp, const BarrettCtx64 *ctx) {
-    u64 res = 1;
-    base = base % ctx->p;
-    while (exp > 0) {
-        if (exp & 1) res = mulmod64_barrett(res, base, ctx);
-        base = mulmod64_barrett(base, base, ctx);
-        exp >>= 1;
-    }
-    return res;
-}
-
-static inline int is_quad_residue64(u64 val, const BarrettCtx64 *ctx) {
-    u64 res = powmod64_barrett(val, (ctx->p - 1) >> 1, ctx);
-    return (res == 1 || res == 0);
-}
-
 /* ================================================================
- * u64 Verification Engine
+ * Strategy 1 Accelerated u64 Verification Engine
  * ================================================================ */
 
 static int verify64(u64 p, u64 A, u64 x0, const BarrettCtx64 *ctx) {
@@ -196,6 +196,8 @@ static int verify64(u64 p, u64 A, u64 x0, const BarrettCtx64 *ctx) {
 
     if (A%p==2||A%p==p-2) { t_ops.branch_count++; return 0; }
     u64 X=x0%p, Z=1;
+
+    /* Point Doubling Loop: All modular multiplications accelerated via Barrett */
     for (int i=1; i<=k; i++) {
         u64 X2=mulmod64_barrett(X,X,ctx), Z2=mulmod64_barrett(Z,Z,ctx), XZ=mulmod64_barrett(X,Z,ctx);
         u64 d=submod64(X2,Z2,p), Xn=mulmod64_barrett(d,d,ctx);
@@ -209,7 +211,7 @@ static int verify64(u64 p, u64 A, u64 x0, const BarrettCtx64 *ctx) {
 }
 
 /* ================================================================
- * u128 Verification Engine (with Legendre Pruning & Slow Mod fallback)
+ * Strategy 1 u128 Verification Engine (For primes p >= 2^63)
  * ================================================================ */
 
 static inline u128 addmod128(u128 a, u128 b, u128 p) { u128 s=a+b; return s>=p?s-p:s; }
@@ -220,22 +222,6 @@ static u128 mulmod_slow(u128 a, u128 b, u128 p) {
     u128 r=0; a%=p; b%=p;
     while (b>0) { if(b&1){r+=a;if(r>=p)r-=p;} a+=a;if(a>=p)a-=p; b>>=1; }
     return r;
-}
-
-static inline u128 powmod128_slow(u128 base, u128 exp, u128 p) {
-    u128 res = 1;
-    base = base % p;
-    while (exp > 0) {
-        if (exp & 1) res = mulmod_slow(res, base, p);
-        base = mulmod_slow(base, base, p);
-        exp >>= 1;
-    }
-    return res;
-}
-
-static inline int is_quad_residue128(u128 val, u128 p) {
-    u128 res = powmod128_slow(val, (p - 1) >> 1, p);
-    return (res == 1 || res == 0);
 }
 
 static int verify128(u128 p, u128 A, u128 x0) {
@@ -263,7 +249,11 @@ static int verify128(u128 p, u128 A, u128 x0) {
 }
 
 /* ================================================================
- * Dispatch: search64 / search128 (Benchmarked & Pruned)
+ * Strategy 1 Dispatchers: search64 / search128
+ *
+ * NOTE: Both Strategy 2 (X1(16) sampling) and Strategy 3 (Legendre Pruning)
+ * have been completely removed. Curves are sampled via uniform Monte Carlo
+ * random generation over Fp, ensuring M1 remains around ~11,800 trials.
  * ================================================================ */
 
 static int search64(u64 p, int target_total, int start_count,
@@ -300,18 +290,13 @@ static int search64(u64 p, int target_total, int start_count,
         u64 A_trials = 0;
 
         while (found_count < target_total && A_trials < budget) {
+            /* Pure Monte Carlo Uniform Sampling over Fp */
             u64 A = rng64(&rng) % p;
             if (A==2||A==p-2) { continue; }
 
+            /* A_trials increments exactly ONCE per valid curve sampled */
             A_trials++;
             thread_trials[tid * 8] = A_trials;
-
-            /* --- Strategy 3: Legendre Symbol Early Abortion --- */
-            u64 delta = submod64(mulmod64_barrett(A, A, &ctx), 4, p);
-            if (!is_quad_residue64(delta, &ctx)) {
-                t_ops.branch_count++;
-                continue; /* Prune early: cannot form 4-torsion */
-            }
 
             int a_success = 0;
             for (int x_tries = 0; x_tries < 50 && !a_success && found_count < target_total; x_tries++) {
@@ -320,7 +305,10 @@ static int search64(u64 p, int target_total, int start_count,
 
                 t_ops.mul_count = 0; t_ops.inv_count = 0; t_ops.branch_count = 0;
                 uint64_t c_start = rdtsc();
+
+                /* Verify candidate point using Barrett-accelerated doubling chain */
                 int ok = verify64(p, A, x0r, &ctx);
+
                 uint64_t c_end = rdtsc();
                 uint64_t cyc = c_end - c_start;
                 OpCounter this_ops = t_ops;
@@ -395,18 +383,12 @@ static int search128(u128 p, int target_total, int start_count,
         u64 A_trials = 0;
 
         while (found_count < target_total && A_trials < budget) {
+            /* Pure Monte Carlo Uniform Sampling over Fp */
             u128 A = (u128)rng64(&rng) | ((u128)rng64(&rng) << 64); A %= p;
             if (A==2 || A==p-2) continue;
 
             A_trials++;
             thread_trials[tid * 8] = A_trials;
-
-            /* --- Strategy 3: Legendre Symbol Early Abortion --- */
-            u128 delta = submod128(mulmod_slow(A, A, p), 4, p);
-            if (!is_quad_residue128(delta, p)) {
-                t_ops.branch_count++;
-                continue; /* Prune early */
-            }
 
             int a_success = 0;
             for (int x_tries = 0; x_tries < 50 && !a_success && found_count < target_total; x_tries++) {
@@ -458,12 +440,12 @@ static int search128(u128 p, int target_total, int start_count,
 }
 
 /* ================================================================
- * Batch-processing main (INCREMENTAL LOGIC WITH TIME BENCHMARK)
+ * Batch-Processing Main Engine
  * ================================================================ */
 
 int main(int argc, char *argv[]) {
     if (argc < 5) {
-        printf("Usage: ./pomerance_opt <stateful_input.txt> <output_pure.csv> <output_metrics.csv> <target_total>\n");
+        printf("Usage: ./pomerance_s1 <stateful_input.txt> <output_pure.csv> <output_metrics.csv> <target_total>\n");
         return 1;
     }
 
@@ -550,6 +532,7 @@ int main(int argc, char *argv[]) {
         int newly_found = found_amount - num_existing;
 
         if (newly_found > 0) {
+            /* Chronological Sorting by cumulative trials */
             for (int i = num_existing; i < found_amount - 1; i++) {
                 for (int j = num_existing; j < found_amount - 1 - (i - num_existing); j++) {
                     if (out_trials_arr[j] > out_trials_arr[j+1]) {
@@ -561,6 +544,11 @@ int main(int argc, char *argv[]) {
                         tmp = out_mul_arr[j]; out_mul_arr[j] = out_mul_arr[j+1]; out_mul_arr[j+1] = tmp;
                         tmp = out_inv_arr[j]; out_inv_arr[j] = out_inv_arr[j+1]; out_inv_arr[j+1] = tmp;
                         tmp = out_branch_arr[j]; out_branch_arr[j] = out_branch_arr[j+1]; out_branch_arr[j+1] = tmp;
+                        if (p >= ((u128)1 << 63)) {
+                            u128 tmp128;
+                            tmp128 = out_A128[j]; out_A128[j] = out_A128[j+1]; out_A128[j+1] = tmp128;
+                            tmp128 = out_x0128[j]; out_x0128[j] = out_x0128[j+1]; out_x0128[j+1] = tmp128;
+                        }
                     }
                 }
             }
@@ -592,8 +580,8 @@ int main(int argc, char *argv[]) {
             }
 
             double avg_time_per_triple = batch_time_ms / (double)newly_found;
-            printf("      Success: found %d new triples in %.2f ms (%.2f ms/triple) | Trials: %lu | Cycles: %lu | M3: %.1f\n",
-                   newly_found, batch_time_ms, avg_time_per_triple, total_new_trials, total_cycles, total_m3);
+            printf("      Success: found %d new triples in %.2f ms (%.2f ms/triple) | Total Trials: %lu (Avg: %lu/triple) | Cycles: %lu | M3: %.1f\n",
+                   newly_found, batch_time_ms, avg_time_per_triple, total_new_trials, total_new_trials / newly_found, total_cycles, total_m3);
             fflush(stdout);
         } else {
             fprintf(out_pure, "%s,FAILED,FAILED\n", p_display);

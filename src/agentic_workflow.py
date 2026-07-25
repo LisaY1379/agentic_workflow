@@ -362,7 +362,7 @@ def discuss_with_pm():
         chat_history.append({"role": "user", "content": user_input})
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.5",
             messages=chat_history,
             tools=pm_tools_metadata
         )
