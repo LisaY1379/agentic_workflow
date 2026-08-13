@@ -4,20 +4,25 @@ import json
 import subprocess
 from openai import OpenAI
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv(override=True)
+secret_file = Path.home() / ".secrets" / "my_keys.env"
+
+load_dotenv(dotenv_path=secret_file, override=True)
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-
-# ==========================================
-# 1. Base Tools (For Specialist Sub-Agents)
-# ==========================================
 def list_files(directory: str = "."):
     """Lists all files in the given directory (default is current directory)."""
     try:
-        files = [f for f in os.listdir(directory) if
-                 os.path.isfile(os.path.join(directory, f)) and not f.startswith('.')]
+        target_dir = os.path.abspath(directory)
+        if not os.path.exists(target_dir):
+            return f"Error: Directory '{target_dir}' does not exist."
+        if not os.path.isdir(target_dir):
+            return f"Error: '{target_dir}' is not a directory."
+
+        files = [f for f in os.listdir(target_dir) if
+                 os.path.isfile(os.path.join(target_dir, f)) and not f.startswith('.')]
         return json.dumps({"files": files}, ensure_ascii=False)
     except Exception as e:
         return f"Error listing directory: {str(e)}"
@@ -42,10 +47,14 @@ def read_local_file(file_name: str):
 def create_or_write_file(file_name: str, content: str):
     """Creates a new file (e.g., .py) or overwrites an existing one with the given content."""
     try:
-        safe_name = os.path.basename(file_name)
-        with open(safe_name, 'w', encoding='utf-8') as f:
+        target_path = os.path.abspath(file_name)
+        parent_dir = os.path.dirname(target_path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+
+        with open(target_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        return f"Success: File '{safe_name}' has been created/updated successfully."
+        return f"Success: File '{target_path}' has been created/updated successfully."
     except Exception as e:
         return f"Error writing file: {str(e)}"
 
@@ -179,11 +188,7 @@ def run_sub_agent(role_name: str, system_prompt: str, task_description: str):
 
     return f"[{role_name} Execution Timeout]: Failed to complete the task within 5 iterations."
 
-
-# ==========================================
-# 3. PM Restricted Sandboxed Tools (Upgraded!)
-# ==========================================
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 def delegate_to_specialist(role_name: str, task_description: str):
     """The tool used by the PM Agent to command specialized sub-agents."""
@@ -204,8 +209,6 @@ def delegate_to_specialist(role_name: str, task_description: str):
     sys_prompt = prompts.get(role_name, "You are a specialized AI assistant with terminal access.")
     return run_sub_agent(role_name, sys_prompt, task_description)
 
-
-# 【升级 1】：同时列举 instructions/ 和 plans/ 下的文件
 def list_pm_files():
     """PM Sandbox: Lists all available files inside BOTH 'instructions/' and 'plans/' directories."""
     result = {}
@@ -221,8 +224,6 @@ def list_pm_files():
             result[folder] = "Directory does not exist yet."
     return json.dumps(result, ensure_ascii=False)
 
-
-# 【升级 2】：允许安全读取两个目录下的文件
 def read_pm_file(directory_name: str, file_name: str):
     """PM Sandbox: Reads files ONLY from either 'instructions/' or 'plans/' directories."""
     if directory_name not in ["instructions", "plans"]:
@@ -321,10 +322,6 @@ PM_TOOLS_MAP = {
     "write_plan_file": write_plan_file
 }
 
-
-# ==========================================
-# 4. Executive PM Agent
-# ==========================================
 def discuss_with_pm():
     print("🤖 PM Agent: Ready. I have read access to instructions/ & plans/, and write access to plans/. All code execution is delegated to my specialists.")
 
@@ -388,7 +385,7 @@ def discuss_with_pm():
                     "content": str(content)
                 })
 
-            final_res = client.chat.completions.create(model="gpt-4o", messages=chat_history)
+            final_res = client.chat.completions.create(model="gpt-5.5", messages=chat_history)
             print(f"\n🤖 PM Agent: {final_res.choices[0].message.content}")
             chat_history.append(final_res.choices[0].message)
         else:
