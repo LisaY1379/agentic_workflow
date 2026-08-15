@@ -21,9 +21,9 @@ This problem tests the agent's ability in optimizing algorithms under a given fr
 
 * Evaluation of the new method in:
 
-    `reports/method_eval_13d.txt`: Tested established algorithms (method 2 & 3) with and without method 4 (new method). Results show method 4's ability in running-time acceleration.
+    `workflow_logs/problem1_generate_new_method/reports/method_eval_13d.txt`: Tested established algorithms (method 2 & 3) with and without method 4 (new method). Results show method 4's ability in running-time acceleration.
 
-    `reports/10^24+7.txt`: Tested method 2+1+4 on 10^24+7, found a proof in 2h 21min (7221920.97ms), about 2.5x speed of previous fastest code 5h 49min.
+    `workflow_logs/problem1_generate_new_method/reports/10^24+7.txt`: Tested method 2+1+4 on 10^24+7, found a proof in 2h 21min (7221920.97ms), about 2.5x speed of previous fastest code 5h 49min.
 
 ## Problem 2: Investigate Stage Jumps in the Difficulty of finding Pomerance Proofs
 
